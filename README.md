@@ -53,19 +53,10 @@ ls
 ### Step 3
 Notice the **src/** directory in the workspace? The next step is to delete this directory and symbolically link the **src/** directory in your repo to the workspace. To do this, run:
 ```
-rm src/ -r
-ln -s ~/PATH/TO/YOUR/REPO/src/ .
+rm -r src/*
+ln -s ~/PATH/TO/YOUR/REPO/src/ros_package_name .
 ls
 ```
-
-If you followed the file structure above, you can just copy thi following:
-```
-rm src/ -r
-ln -s ../ugv_repository/src/ .
-ls
-```
-
-Notice how the **src/** directory still shows up after `ls`, it might look different to other directories. This is because it is a symbolic link.
 
 ### Step 4
 The final step is to build your workspace with the new source files. Simply run `catkin_make` again:
