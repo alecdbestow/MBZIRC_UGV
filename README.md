@@ -2,6 +2,9 @@
 
 All source code for the control of the RoBros UGV for the UCRG internal competition challenges.
 
+## AUV Architecture
+![System Architecture](readme_images/UGV_Architecture.png)
+
 ## Getting Started
 We will be setting up a seperate catkin workspace and source code repository and linking them using symbolic links. This will allow us to build our project inside the workspace, while not interfering with the source code in our repo. For more on symbolic links refer to [this](https://www.makeuseof.com/tag/what-is-a-symbolic-link-what-are-its-uses-makeuseof-explains/). 
 
