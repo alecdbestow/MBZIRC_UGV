@@ -1,0 +1,12 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/alec/Documents/UCRG/ugv_workspace/devel/lib/python3/dist-packages",
+        "/home/alec/Documents/UCRG/uav_workspace/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/alec/Documents/UCRG/ugv_workspace/devel/lib/python3/dist-packages",
+        "/home/alec/Documents/UCRG/uav_workspace/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages"
+    ]
+}

@@ -1,0 +1,28 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${workspaceFolder}/.vscode/browse.vc.db",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/alec/Documents/UCRG/ugv_workspace/devel/include/**",
+        "/home/alec/Documents/UCRG/uav_workspace/devel/include/**",
+        "/opt/ros/noetic/include/**",
+        "/home/alec/Documents/UCRG/uav_workspace/src/mav_comm/mav_msgs/include/**",
+        "/home/alec/Documents/UCRG/uav_workspace/src/mav_comm/mav_planning_msgs/include/**",
+        "/home/alec/Documents/UCRG/uav_workspace/src/rotors_simulator/rotors_control/include/**",
+        "/home/alec/Documents/UCRG/uav_workspace/src/rotors_simulator/rotors_gazebo_plugins/include/**",
+        "/home/alec/Documents/UCRG/uav_workspace/src/rotors_simulator/rotors_hil_interface/include/**",
+        "/home/alec/Documents/UCRG/uav_workspace/src/rotors_simulator/rotors_joy_interface/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

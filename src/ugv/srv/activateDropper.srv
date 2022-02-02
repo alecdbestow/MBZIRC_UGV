@@ -1,0 +1,6 @@
+uint8 status
+# 0 for close
+# 1 for open
+# 2 for switch
+---
+bool worked
