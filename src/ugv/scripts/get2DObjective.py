@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# I'm such a loser I hard-coded the location of the images.
 
 import debugpy
 
@@ -36,7 +37,8 @@ utils_ops.tf = tf.compat.v1
 # Patch the location of gfile
 tf.gfile = tf.io.gfile
 
-class Detector:
+
+class ObjectDetector:
     def __init__(self):
         self.PATH_TO_LABELS = '/home/alec/Documents/Tensorflow/workspace/training_demo/annotations/label_map.pbtxt'
         self.category_index = label_map_util.create_category_index_from_labelmap(self.PATH_TO_LABELS, use_display_name=True)
@@ -45,7 +47,6 @@ class Detector:
         self.model_dir = "/home/alec/Documents/Tensorflow/workspace/training_demo/exported-models/my_model/saved_model"
 
         self.model = tf.saved_model.load(str(self.model_dir))
-
 
     def run_inference_for_single_image(self, image):
         # The input needs to be a tensor, convert it using `tf.convert_to_tensor`.
@@ -78,7 +79,6 @@ class Detector:
                                                 tf.uint8)
             output_dict['detection_masks_reframed'] = detection_masks_reframed.numpy()
         return output_dict
-
 
     def show_inference(self, image):
         # the array based representation of the image will be used later in order to prepare the
@@ -128,9 +128,59 @@ class Detector:
         
         
         cv2.imwrite('/home/alec/Pictures/cv_images/' + str(time.time_ns()) + '.jpg', image_np)
-        cv2.waitKey(0) # waits until a key is pressed
+
+class Point:
+    def __init__(self, X, Y):
+        self.x = X
+        self.y = Y
+
+    def __add__(self, p1):
+        return Point(self.x + p1.x, self.y + p1.y)
+
+class Box:
+    def __init__(self, p1, p2) -> None:
+        self.lower = p1
+        self.upper = p2
+
+    def addOffset(self, tile):
+        self.lower = self.lower + tile.upper
+        self.upper = self.upper + tile.upper
         
 
+class Tile:
+    def __init__(self, pos, image):
+
+        height = image.shape[0]
+        width = image.shape[1]
+        
+        # Tile positions are:
+        # 0 1
+        # 2 3
+        if pos is 0:
+            self.lower = Point(0,0)
+            self.upper = Point(width // 2, height // 2)
+        elif pos is 1:
+            self.lower = Point(width // 2,0)
+            self.upper = Point(width, height // 2)
+        elif pos is 2:
+            self.lower = Point(0, height // 2)
+            self.upper = Point(width // 2, height)
+        elif pos is 3:
+            self.lower = Point(width // 2, height // 2)
+            self.upper = Point(width, height)
+        
+        self.tile = image[self.lower.y:self.upper.y, self.lower.x:self.upper.x]
+
+def getTiles(image):
+    return [Tile(0, image), Tile(1, image), Tile(2, image), Tile(3, image)]
+
+class Detector:
+    def __init__(self):
+        od = ObjectDetector()
+
+        
+    def getDateList(self):
+        self.od.show_inference(self.image)
 
     def getColourImageCallback(self, image_message):
         bridge = CvBridge()
@@ -155,13 +205,13 @@ class Detector:
             signed=False
         )
 
-    def getBoxDisparity(self, p1, p2):
+    def getBoxDisparity(self, box):
         max = 0
         min = 0
-        for y in range(p1[1], p2[2]):
-            for x in range(p1[0], p2[0]):
+        for y in range(box.lower.y, box.upper.y):
+            for x in range(box.lower.x, box.upper.x):
                 dist = self.getDepthAtPixel(self.depth_image, x, y)
-                if dist:
+                if dist > 0:
                     if dist < min:
                         min = dist
                     elif dist > max:
@@ -169,52 +219,38 @@ class Detector:
         
         return max - min
 
-    
+
+
+    def getBoxes(self):
+        boxes = []
+        for tile in self.tiles:
+            for box in self.od.run_inference_for_single_image(tile):
+                box.addOffset(tile)
+                boxes.append(box)
+        
+
     def get2DObjectiveCallback(self, objective):
-        self.getDepthAtPixel(self.depth_image, 100, 100)
-        '''
-        print("geting objective")
-        height = self.image.shape[0]
-        width = self.image.shape[1]
-
-        width_cutoff = width // 2
-        height_cutoff = height // 2
-
-        
-        self.tile1 = self.image[height_cutoff:, :width_cutoff]
-        self.tile2 = self.image[height_cutoff:, width_cutoff:]
-        self.tile3 = self.image[:height_cutoff, :width_cutoff]
-        self.tile4 = self.image[:height_cutoff, width_cutoff:]
+        self.tiles = getTiles(self.image)
+        boxes = self.getBoxes()
+        MIN_DISPARITY = 300
+        dates = []
+        for box in boxes:
+            if self.getBoxDisparity(box) > MIN_DISPARITY:
+                dates.append(box)
 
         
-        #self.tile3.show()
-        print("after tiling")
-        self.show_inference(self.tile1)
-        self.show_inference(self.tile2)
-        self.show_inference(self.tile3)
-        self.show_inference(self.tile4)
         
-        pass
-    '''
+        return 0
+
     
     def saveImagesCallback(self, objective):
-        height = self.image.shape[0]
-        width = self.image.shape[1]
-
-        width_cutoff = width // 2
-        height_cutoff = height // 2
-
-        
-        tile1 = self.image[height_cutoff:, :width_cutoff]
-        tile2 = self.image[height_cutoff:, width_cutoff:]
-        tile3 = self.image[:height_cutoff, :width_cutoff]
-        tile4 = self.image[:height_cutoff, width_cutoff:]
+        self.tileImages()
 
         cv2.imwrite('/home/alec/Pictures/cv_images/' + str(time.time_ns()) + '_uncut.jpg', self.image)
-        cv2.imwrite('/home/alec/Pictures/cv_images/' + str(time.time_ns()) + '_1.jpg', tile1)
-        cv2.imwrite('/home/alec/Pictures/cv_images/' + str(time.time_ns()) + '_2.jpg', tile2)
-        cv2.imwrite('/home/alec/Pictures/cv_images/' + str(time.time_ns()) + '_3.jpg', tile3)
-        cv2.imwrite('/home/alec/Pictures/cv_images/' + str(time.time_ns()) + '_4.jpg', tile4)
+        cv2.imwrite('/home/alec/Pictures/cv_images/' + str(time.time_ns()) + '_1.jpg', self.tile1)
+        cv2.imwrite('/home/alec/Pictures/cv_images/' + str(time.time_ns()) + '_2.jpg', self.tile2)
+        cv2.imwrite('/home/alec/Pictures/cv_images/' + str(time.time_ns()) + '_3.jpg', self.tile3)
+        cv2.imwrite('/home/alec/Pictures/cv_images/' + str(time.time_ns()) + '_4.jpg', self.tile4)
         
 
 def main():
