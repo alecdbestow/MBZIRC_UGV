@@ -20,6 +20,7 @@ import cv2
 import time
 
 from ugv.srv import get2DObjective, get2DObjectiveResponse, saveImages
+from ugv.msg import target
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 from collections import defaultdict
@@ -89,31 +90,7 @@ class ObjectDetector:
         #image_np.setflags(write=1)
         output_dict = self.run_inference_for_single_image(image_np)
 
-        left = 0
-        right = 0
-        upper = 0
-        lower = 0
 
-        depth_height = self.realsense_image.shape[0]
-        depth_width = self.realsense_image.shape[1]
-
-        colour_width = self.camera_image.shape[1]
-        colour_height = self.camera_image.shape[0]
-
-        OVERSIZE_RATIO = 0.1
-
-        left = (depth_width/colour_width) * left
-        right = (depth_width/colour_width) * right
-
-        left = left - (right - left) * OVERSIZE_RATIO
-        right = right + (right - left) * OVERSIZE_RATIO
-
-        upper = upper - (lower - upper) * OVERSIZE_RATIO
-        lower = lower 
-
-        upper = (depth_height/colour_height) * upper
-        lower = (depth_height/colour_height) * lower
-        
         # Visualization of the results of a detection.
         vis_util.visualize_boxes_and_labels_on_image_array(
             image_np,
@@ -128,6 +105,8 @@ class ObjectDetector:
         
         
         cv2.imwrite('/home/alec/Pictures/cv_images/' + str(time.time_ns()) + '.jpg', image_np)
+    
+ 
 
 class Point:
     def __init__(self, X, Y):
@@ -156,16 +135,16 @@ class Tile:
         # Tile positions are:
         # 0 1
         # 2 3
-        if pos is 0:
+        if pos == 0:
             self.lower = Point(0,0)
             self.upper = Point(width // 2, height // 2)
-        elif pos is 1:
+        elif pos == 1:
             self.lower = Point(width // 2,0)
             self.upper = Point(width, height // 2)
-        elif pos is 2:
+        elif pos == 2:
             self.lower = Point(0, height // 2)
             self.upper = Point(width // 2, height)
-        elif pos is 3:
+        elif pos == 3:
             self.lower = Point(width // 2, height // 2)
             self.upper = Point(width, height)
         
@@ -176,7 +155,7 @@ def getTiles(image):
 
 class Detector:
     def __init__(self):
-        od = ObjectDetector()
+        self.od = ObjectDetector()
 
         
     def getDateList(self):
@@ -189,8 +168,7 @@ class Detector:
         self.image = np.asarray_chkfinite(cv_image)
 
     def getDepthImageCallback(self, depth_message):
-        if not self.depth_image:
-            self.depth_image = Image()
+        self.depth_image = Image()
         self.depth_image = depth_message
         self.getDepthAtPixel(self.depth_image, 100, 100)
         
@@ -219,15 +197,41 @@ class Detector:
         
         return max - min
 
-
+    def getboxMinDistance(self, box):
+        min = 0
+        p = Point(0, 0)
+        for y in range(box.lower.y, box.upper.y):
+            for x in range(box.lower.x, box.upper.x):
+                dist = self.getDepthAtPixel(self.depth_image, x, y)
+                if  0 < dist < min:
+                    min = dist
+                    p,x = x
+                    p.y = y
+        
+        
+        return (p, min)
 
     def getBoxes(self):
         boxes = []
         for tile in self.tiles:
-            for box in self.od.run_inference_for_single_image(tile):
+            for box in self.od.run_inference_for_single_image(tile.tile):
                 box.addOffset(tile)
                 boxes.append(box)
         
+    def extractBoxes(self, output_dict):
+        height = self.image.shape[0]
+        width = self.image.shape[1]
+        MIN_CONFIDENCE = 0.8
+        i = 0
+        boxes = []
+        while output_dict['detection_scores'][i] > MIN_CONFIDENCE:
+            if output_dict['detection_classes'][i] == 1:
+                temp = output_dict['detection_box'][i]
+                boxes.append(Box(
+                    Point(temp[0] * width, temp[1] * height), 
+                    Point(temp[2] * width, temp[3] * height)))
+            i += 1
+        return boxes   
 
     def get2DObjectiveCallback(self, objective):
         self.tiles = getTiles(self.image)
@@ -237,10 +241,10 @@ class Detector:
         for box in boxes:
             if self.getBoxDisparity(box) > MIN_DISPARITY:
                 dates.append(box)
-
         
+        target(x, y)
+        return get2DObjectiveResponse()
         
-        return 0
 
     
     def saveImagesCallback(self, objective):
