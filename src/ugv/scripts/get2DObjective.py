@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# I'm such a loser I hard-coded the location of the images.
 
 import debugpy
 
@@ -8,14 +7,8 @@ debugpy.wait_for_client()
 
 
 import numpy as np
-import os
-import sys
-import tarfile
 import tensorflow as tf
-import zipfile
-import pathlib
 import rospy
-import PIL
 import cv2
 import time
 
@@ -23,9 +16,6 @@ from ugv.srv import get2DObjective, get2DObjectiveResponse, saveImages
 from ugv.msg import target
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
-from collections import defaultdict
-from io import StringIO
-from matplotlib import pyplot as plt
 from IPython.display import display
 
 from object_detection.utils import ops as utils_ops
