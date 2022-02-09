@@ -1,3 +1,4 @@
 int64 objective
 ---
-ugv/target[] targets
+ugv/target target
+int64 distance

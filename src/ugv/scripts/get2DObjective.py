@@ -105,6 +105,9 @@ class Point:
 
     def __add__(self, p1):
         return Point(self.x + p1.x, self.y + p1.y)
+    
+    def __truediv__(self, div):
+        return Point(self.x / div, self.y / div)
 
 class Box:
     def __init__(self, p1, p2) -> None:
@@ -114,6 +117,10 @@ class Box:
     def addOffset(self, tile):
         self.lower = self.lower + tile.upper
         self.upper = self.upper + tile.upper
+    
+    def getMiddle(self, tile):
+        return (self.lower + self.upper)/2
+        
         
 
 class Tile:
@@ -201,36 +208,36 @@ class Detector:
         
         return (p, min)
 
-    def getBoxes(self):
-        boxes = []
+    def getBox(self):
         for tile in self.tiles:
-            for box in self.od.run_inference_for_single_image(tile.tile):
-                box.addOffset(tile)
-                boxes.append(box)
+            outputDict = self.od.run_inference_for_single_image(tile.tile)
+            box = self.extractBox(outputDict)
+            if box:
+                break
+        return box
         
-    def extractBoxes(self, output_dict):
+    def extractBox(self, output_dict):
         height = self.image.shape[0]
         width = self.image.shape[1]
         MIN_CONFIDENCE = 0.8
-        i = 0
-        boxes = []
-        while output_dict['detection_scores'][i] > MIN_CONFIDENCE:
-            if output_dict['detection_classes'][i] == 1:
-                temp = output_dict['detection_box'][i]
-                boxes.append(Box(
-                    Point(temp[0] * width, temp[1] * height), 
-                    Point(temp[2] * width, temp[3] * height)))
-            i += 1
-        return boxes   
+
+        if output_dict['detection_scores'][i] > MIN_CONFIDENCE and output_dict['detection_classes'][i] == 1:
+            temp = output_dict['detection_box'][i]
+            return Box(
+                Point(temp[0] * width, temp[1] * height), 
+                Point(temp[2] * width, temp[3] * height))
+        else:
+            return None  
 
     def get2DObjectiveCallback(self, objective):
         self.tiles = getTiles(self.image)
-        boxes = self.getBoxes()
+        box = self.getBox()
         MIN_DISPARITY = 300
         dates = []
         for box in boxes:
             if self.getBoxDisparity(box) > MIN_DISPARITY:
                 dates.append(box)
+        dates.so
         
         target(x, y)
         return get2DObjectiveResponse()

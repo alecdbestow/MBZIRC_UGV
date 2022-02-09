@@ -1,20 +1,29 @@
 #!/usr/bin/env python3
 
 import rospy
+import time
 
-from ugv.srv import get2DObjective
+from ugv.srv import get2DObjective, activateDropper
+
 
 class UGV:
     def __init__(self) -> None:
+        rospy.init_node('main controller')
         rospy.wait_for_service('get2DObjective')
         self.get2DObjective = rospy.ServiceProxy('get2DObjective', get2DObjective)
+        self.dateService = rospy.ServiceProxy('dropDates', activateDropper)
 
     def scanForObjective(self, objective):
         point, distance = self.get2DObjective(objective)
         if distance == 0:
-            print("rotate by: 20 degrees")
+            self.rotate(20)
+            point, distance = self.get2DObjective(objective)
         
-        return (0, 0)
+        if distance == 0:
+            self.rotate(-40)
+            point, distance = self.get2DObjective(objective)
+        
+        return (point, distance)
 
     def rotate(self, degrees):
         if degrees != 0:
@@ -36,21 +45,35 @@ class UGV:
         self.rotate(self.getDegrees(point))
         self.travel(distance)
 
-    def catchDate(searching = False):
-        point, distance = scanForObjective(DATE)
-        searching
+    def catchDate(self):
+        DATE = 1
+        point, distance = self.scanForObjective(DATE)
+        self.adjustPosition(point, distance)
+        
         return distance != 0
 
-    def dropDate():
-        pass
+    def dropDate(self):
+        DROP_BOX = 2
+        OPEN = 1
+        CLOSE = 0
+        point, distance = self.scanForObjective(DROP_BOX)
+        if distance == 0:
+            print("ERROR CANNOT FIND DROP BOX!")
+            input()
+        self.adjustPosition(point, distance)
+        self.dateService(OPEN)
+        time.sleep(2)
+        self.dateService(CLOSE)
+        time.sleep(2) 
 
 
 def main():
-    rospy.init_node('main controller')
-    while catchDate():
-        print("rotate by: 180 degrees")
-        dropDate()
-        print("rotate by: 180 degrees")
+
+    ugv = UGV()
+    while ugv.catchDate():
+        ugv.rotate(180)
+        ugv.dropDate()
+        ugv.rotate(180)
 
 if __name__ == '__main__':
     main()
