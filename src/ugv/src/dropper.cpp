@@ -8,24 +8,43 @@ constexpr int OPEN = 0;
 class Dropper   {
     public:
         Dropper();
-        bool service(ugv::activateDropper::Request &req, ugv::activateDropper::Response &res);
-        std_msgs::UInt16 angle;
+        bool dropDates(ugv::activateDropper::Request &req, ugv::activateDropper::Response &res);
+        bool dropBlanket(ugv::activateDropper::Request &req, ugv::activateDropper::Response &res);
+        std_msgs::UInt16 dateAngle;
+        std_msgs::UInt16 blanketAngle;
         
 };
 
 Dropper::Dropper()  {
-    angle.data = CLOSED;
+    dateAngle.data = CLOSED;
+    blanketAngle.data = CLOSED;
 }
-bool Dropper::service(ugv::activateDropper::Request &req, ugv::activateDropper::Response &res)
+bool Dropper::dropDates(ugv::activateDropper::Request &req, ugv::activateDropper::Response &res)
 {
     if (req.status == 0) {
-        angle.data = CLOSED;
+        dateAngle.data = CLOSED;
     }   else if (req.status == 1)    {
-        angle.data = OPEN;
-    }   else if (req.status == 2 && angle.data == OPEN) {
-        angle.data = CLOSED;
+        dateAngle.data = OPEN;
+    }   else if (req.status == 2 && dateAngle.data == OPEN) {
+        dateAngle.data = CLOSED;
     }   else    {
-        angle.data = OPEN;
+        dateAngle.data = OPEN;
+    }
+        
+    res.worked = true;
+    return true;
+}
+
+bool Dropper::dropBlanket(ugv::activateDropper::Request &req, ugv::activateDropper::Response &res)
+{
+    if (req.status == 0) {
+        blanketAngle.data = CLOSED;
+    }   else if (req.status == 1)    {
+        blanketAngle.data = OPEN;
+    }   else if (req.status == 2 && blanketAngle.data == OPEN) {
+        blanketAngle.data = CLOSED;
+    }   else    {
+        blanketAngle.data = OPEN;
     }
         
     res.worked = true;
@@ -37,15 +56,18 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "add_two_ints_server");
 
     ros::NodeHandle nh;
-    ros::Publisher publisher = nh.advertise<std_msgs::UInt16>("servo",1);
+    ros::Publisher datePublisher = nh.advertise<std_msgs::UInt16>("DateServo",1);
+    ros::Publisher blanketPublisher = nh.advertise<std_msgs::UInt16>("BlanketServo",1);
     Dropper dropper;
     // start the dropper in the open position
     ros::Rate loop_rate(10);
     int count = 0;
-    ros::ServiceServer service = nh.advertiseService("activateDropper", &Dropper::service, &dropper);
+    ros::ServiceServer dateService = nh.advertiseService("dropDates", &Dropper::dropDates, &dropper);
+    ros::ServiceServer blanketService = nh.advertiseService("dropBlanket", &Dropper::dropBlanket, &dropper);
 
     while (ros::ok())   {
-        publisher.publish(dropper.angle);
+        datePublisher.publish(dropper.dateAngle);
+        blanketPublisher.publish(dropper.blanketAngle);
         ros::spinOnce();
         loop_rate.sleep();
         ++count;
