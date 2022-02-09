@@ -2,25 +2,47 @@
 
 import rospy
 
-def scanForObjective(objective):
-    #scan
-    return (0, 0)
+from ugv.srv import get2DObjective
 
-def getDegrees(point):
-    return 0
+class UGV:
+    def __init__(self) -> None:
+        rospy.wait_for_service('get2DObjective')
+        self.get2DObjective = rospy.ServiceProxy('get2DObjective', get2DObjective)
 
-def adjustPosition(point, distance):
-    print(f"rotate by: {getDegrees(point)} degrees")
-    print(f"move forward by: {distance} mm")
+    def scanForObjective(self, objective):
+        point, distance = self.get2DObjective(objective)
+        if distance == 0:
+            print("rotate by: 20 degrees")
+        
+        return (0, 0)
+
+    def rotate(self, degrees):
+        if degrees != 0:
+            print(f"rotate by: {degrees} degrees")
+            print("Press any key when finished")
+            input()
     
+    def travel(self, distance):
+        if distance != 0:
+            print(f"move forward by: {distance} mm")
+            print("Press any key when finished")
+            input()
+        
 
-def catchDate():
-    point, distance = scanForObjective(DATE)
-    
-    return distance != 0
+    def getDegrees(point):
+        return 0
 
-def dropDate():
-    pass
+    def adjustPosition(self, point, distance):
+        self.rotate(self.getDegrees(point))
+        self.travel(distance)
+
+    def catchDate(searching = False):
+        point, distance = scanForObjective(DATE)
+        searching
+        return distance != 0
+
+    def dropDate():
+        pass
 
 
 def main():
