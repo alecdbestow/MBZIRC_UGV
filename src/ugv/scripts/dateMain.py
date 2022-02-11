@@ -14,16 +14,23 @@ class UGV:
         self.dateService = rospy.ServiceProxy('dropDates', activateDropper)
 
     def scanForObjective(self, objective):
-        point, distance = self.get2DObjective(objective)
+        resp = self.get2DObjective(objective)
+        distance = resp.distance
+        respRotate = resp.rotate
         if distance == 0:
+            print("did not detect")
             self.rotate(20)
-            point, distance = self.get2DObjective(objective)
+            resp = self.get2DObjective(objective)
+            distance = resp.distance
+            respRotate = resp.rotate
         
         if distance == 0:
             self.rotate(-40)
-            point, distance = self.get2DObjective(objective)
+            resp = self.get2DObjective(objective)
+            distance = resp.distance
+            respRotate = resp.rotate
         
-        return (point, distance)
+        return (respRotate, distance)
 
     def rotate(self, degrees):
         if degrees != 0:
@@ -38,7 +45,7 @@ class UGV:
             input()
         
 
-    def getDegrees(point):
+    def getDegrees(self, point):
         return 0
 
     def adjustPosition(self, point, distance):
@@ -68,8 +75,10 @@ class UGV:
 
 
 def main():
-
+    
     ugv = UGV()
+    print("ready! press any key to start")
+    input()
     while ugv.catchDate():
         ugv.rotate(180)
         ugv.dropDate()

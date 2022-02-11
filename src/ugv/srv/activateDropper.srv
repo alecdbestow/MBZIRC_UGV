@@ -1,4 +1,4 @@
-uint8 status
+uint16 status
 # 0 for close
 # 1 for open
 # 2 for switch

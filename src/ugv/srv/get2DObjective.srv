@@ -1,4 +1,4 @@
 int64 objective
 ---
-ugv/target target
+float64 rotate
 int64 distance

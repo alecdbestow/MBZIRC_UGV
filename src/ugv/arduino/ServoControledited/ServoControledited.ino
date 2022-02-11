@@ -20,7 +20,7 @@
 
 #include <Servo.h> 
 #include <ros.h>
-#include <std_msgs/UInt8.h>
+#include <std_msgs/UInt16.h>
 
 ros::NodeHandle  nh;
 
@@ -32,7 +32,7 @@ void servo_cb( const std_msgs::UInt16& cmd_msg){
 }
 
 
-ros::Subscriber<std_msgs::UInt16> sub("servo", servo_cb);
+ros::Subscriber<std_msgs::UInt16> sub("DateServo", servo_cb);
 
 void setup(){
   pinMode(13, OUTPUT);

@@ -183,6 +183,8 @@ include_directories(
 catkin_install_python(PROGRAMS 
   scripts/get2DObjective.py
   scripts/alignImages.py
+  scripts/dateMain.py
+  scripts/blanketMain.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

@@ -1,14 +1,17 @@
 <launch>
 
-	<!-- -->
+	<node pkg="ugv" type="camera_publisher" name="camera_publisher" args="0"/>
 	<arg name="port"  default="/dev/ttyACM0" />
 	<node name="serial_node" pkg="rosserial_python" type="serial_node.py">
 		<param name="port" value="$(arg port)"/>
 		<param name="baud" value="57600" />
 	</node>
-	<node pkg="ugv" type="main.py" name="main" output="screen"/>
-	<node pkg="ugv" type="get2DObjective.py" name="get2DObjective" output="screen"/>
 	<node pkg="ugv" type="dropper_service" name="dropper_service" output="screen"/>
 	
-	<node pkg="ugv" type="camera_publisher" name="camera_publisher" args="0"/>
+	
+	<node pkg="ugv" type="get2DObjective.py" name="get2DObjective" output="screen"/>
+	<node pkg="ugv" type="dateMain.py" name="main" output="screen"/>
+	
+	
+	<!-- -->
 </launch>
