@@ -181,6 +181,7 @@ include_directories(
 # )
 
 catkin_install_python(PROGRAMS 
+  scripts/asdf.py
   scripts/get2DObjective.py
   scripts/alignImages.py
   scripts/dateMain.py
