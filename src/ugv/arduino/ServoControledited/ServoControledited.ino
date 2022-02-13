@@ -18,29 +18,40 @@
  #include <WProgram.h>
 #endif
 
+
+
 #include <Servo.h> 
 #include <ros.h>
 #include <std_msgs/UInt16.h>
 
 ros::NodeHandle  nh;
 
-Servo servo;
+Servo dateServo;
+Servo tiltServo;
 
 void servo_cb( const std_msgs::UInt16& cmd_msg){
-  servo.write(cmd_msg.data); //set servo angle, should be from 0-180  
+  Serial.println(cmd_msg.data);
+  dateServo.write(cmd_msg.data); //set servo angle, should be from 0-180  
   digitalWrite(13, HIGH-digitalRead(13));  //toggle led  
 }
 
+void tilt_cb(const std_msgs::UInt16& cmd_msg) {
+  Serial.println(cmd_msg.data);
+    tiltServo.write(cmd_msg.data); //set servo angle, should be from 0-180  
+}
 
-ros::Subscriber<std_msgs::UInt16> sub("DateServo", servo_cb);
+
+ros::Subscriber<std_msgs::UInt16> dateSub("DateServo", servo_cb);
+ros::Subscriber<std_msgs::UInt16> tiltSub("TiltServo", tilt_cb);
 
 void setup(){
-  pinMode(13, OUTPUT);
-
+  Serial.begin(57600);
   nh.initNode();
-  nh.subscribe(sub);
+  nh.subscribe(dateSub);
+  nh.subscribe(tiltSub);
   
-  servo.attach(9); //attach it to pin 9
+  dateServo.attach(9); //attach it to pin 9
+  tiltServo.attach(10);
 }
 
 void loop(){

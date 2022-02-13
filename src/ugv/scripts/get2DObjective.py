@@ -2,6 +2,10 @@
 
 import debugpy
 
+debugpy.listen(5678)
+
+debugpy.wait_for_client()
+
 
 import numpy as np
 import tensorflow as tf
@@ -67,6 +71,27 @@ class ObjectDetector:
             detection_masks_reframed = tf.cast(detection_masks_reframed > 0.5,
                                                 tf.uint8)
             output_dict['detection_masks_reframed'] = detection_masks_reframed.numpy()
+        
+        image_np = image.copy()
+        vis_util.visualize_boxes_and_labels_on_image_array(
+            image_np,
+            output_dict['detection_boxes'],
+            output_dict['detection_classes'],
+            output_dict['detection_scores'],
+            self.category_index,
+            instance_masks=output_dict.get('detection_masks_reframed', None),
+            use_normalized_coordinates=True,
+            line_thickness=8)
+
+        
+        
+        cv2.imwrite('/home/alec/Pictures/cv_images/' + str(time.time_ns()) + '.jpg', image_np)
+    
+        
+        
+        
+        
+        
         return output_dict
 
     def show_inference(self, image):
@@ -111,13 +136,22 @@ class Box:
     def __init__(self, p1, p2) -> None:
         self.lower = p1
         self.upper = p2
+    
+    def addNumberOffset(self, x, y):
+        self.lower.x += x
+        self.upper.x += x
+        self.lower.y += y
+        self.upper.y += y
 
     def addOffset(self, tile):
-        self.lower = self.lower + tile.upper
-        self.upper = self.upper + tile.upper
+        self.lower = self.lower + tile.lower
+        self.upper = self.upper + tile.lower
     
     def getMiddle(self):
-        return Point((self.lower.x + self.upper.x)/2, (self.lower.y + self.upper.y)/2)
+        return Point(
+            (self.lower.x + self.upper.x)/2, 
+            (self.lower.y + self.upper.y)/2
+        )
         
         
 
@@ -165,6 +199,7 @@ class Detector:
     def getDepthImageCallback(self, depth_message):
         self.depth_image = Image()
         self.depth_image = depth_message
+        
 
     def getDepthAtPoint(self, depth_message, point):
         row_step = depth_message.step / depth_message.width
@@ -178,8 +213,8 @@ class Detector:
     def getBoxDisparity(self, box):
         max = 0
         min = 0
-        for y in range(box.lower.y, box.upper.y):
-            for x in range(box.lower.x, box.upper.x):
+        for y in range(int(box.lower.y), int(box.upper.y)):
+            for x in range(int(box.lower.x), int(box.upper.x)):
                 dist = self.getDepthAtPoint(self.depth_image, Point(x, y))
                 if dist > 0:
                     if dist < min:
@@ -190,9 +225,9 @@ class Detector:
         return max - min
 
     def getboxMinDistance(self, box):
-        min = 0
-        for y in range(box.lower.y, box.upper.y):
-            for x in range(box.lower.x, box.upper.x):
+        min = 9999999
+        for y in range(int(box.lower.y), int(box.upper.y)):
+            for x in range(int(box.lower.x), int(box.upper.x)):
                 dist = self.getDepthAtPoint(self.depth_image, Point(x, y))
                 if  0 < dist < min:
                     min = dist     
@@ -202,44 +237,74 @@ class Detector:
 
         
     def extractBoxes(self, output_dict, objective):
-        height = self.image.shape[0]
-        width = self.image.shape[1]
-        MIN_CONFIDENCE = 0.8
+
+        tempTiles = getTiles(
+            cv2.resize(
+                self.image, 
+                (790, 445), #enjoy the magic numbers
+                interpolation = cv2.INTER_AREA)
+        )
+        height = tempTiles[0].tile.shape[0]
+        width = tempTiles[0].tile.shape[1]
+        
+
+        MIN_CONFIDENCE = 0
+        if (objective == DATE):
+            MIN_CONFIDENCE = 0.8
+        else:
+            MIN_CONFIDENCE = 0.40
         boxes = []
         i = 0
         # The detection boxes are ordered by confidence
         while output_dict['detection_scores'][i] > MIN_CONFIDENCE:
             if output_dict['detection_classes'][i] == objective:
-                temp = output_dict['detection_box'][i]
-                p1 = Point(temp[0] * width, temp[1] * height)
-                p2 = Point(temp[2] * width, temp[3] * height)
-                boxes.append(Box(
-                    Point(temp[0] * width, temp[1] * height), 
-                    Point(temp[2] * width, temp[3] * height)))
+
+
+                temp = output_dict['detection_boxes'][i]
+                lower = Point(temp[1] * width, temp[0] * height)
+                upper = Point(temp[3] * width, temp[2] * height)
+                boxes.append(Box(lower,upper))
             i += 1
         return boxes
 
     def getBox(self, objective):
+        tempTiles = getTiles(
+            cv2.resize(
+                self.image, 
+                (790, 445), #enjoy the magic numbers
+                interpolation = cv2.INTER_AREA)
+        )
+        x = 230
+        y = 105
+        for j in range(len(tempTiles)):
+            tempTiles[j].lower.x += x
+            tempTiles[j].upper.x += x
+            tempTiles[j].lower.y += y
+            tempTiles[j].upper.y += y
+
         MIN_DISPARITY = 300
+        i = 0
         for tile in self.tiles:
             outputDict = self.od.run_inference_for_single_image(tile.tile)
             boxes = self.extractBoxes(outputDict, objective)
             for box in boxes:
-                box.addOffset(tile)
+                box.addOffset(tempTiles[i])
                 if objective == DROP_BOX:
-                    return(box, self.getDepthAtPoint(box.getMiddle()))
+                    return(box, self.getDepthAtPoint(self.depth_image, box.getMiddle()))
                 if self.getBoxDisparity(box) > MIN_DISPARITY and objective == DATE:
                     print("detected date!")
                     return (box, self.getboxMinDistance(box))
+            i += 1
                 
         return (Box(Point(0,0), Point(0,0)), 0)
 
-    def get2DObjectiveCallback(self, objective):
+    def get2DObjectiveCallback(self, req):
         self.tiles = getTiles(self.image)
-        box, distance = self.getBox(objective)
+        box, distance = self.getBox(req.objective)
         point = box.getMiddle()
-        
-        return get2DObjectiveResponse(0.1, distance)
+        middle = 1280/2
+        dpp = 86 / 1280
+        return get2DObjectiveResponse((point.x - middle) * dpp, distance)
         
 
     

@@ -4,20 +4,21 @@
 
 constexpr int CLOSED = 180;
 constexpr int OPEN = 0;
+constexpr int LEVEL = 135;
 
 class Dropper   {
     public:
         Dropper();
         bool dropDates(ugv::activateDropper::Request &req, ugv::activateDropper::Response &res);
-        bool dropBlanket(ugv::activateDropper::Request &req, ugv::activateDropper::Response &res);
+        bool tilt(ugv::activateDropper::Request &req, ugv::activateDropper::Response &res);
         std_msgs::UInt16 dateAngle;
-        std_msgs::UInt16 blanketAngle;
+        std_msgs::UInt16 tiltAngle;
         
 };
 
 Dropper::Dropper()  {
     dateAngle.data = CLOSED;
-    blanketAngle.data = CLOSED;
+    tiltAngle.data = LEVEL;
 }
 bool Dropper::dropDates(ugv::activateDropper::Request &req, ugv::activateDropper::Response &res)
 {
@@ -35,18 +36,9 @@ bool Dropper::dropDates(ugv::activateDropper::Request &req, ugv::activateDropper
     return true;
 }
 
-bool Dropper::dropBlanket(ugv::activateDropper::Request &req, ugv::activateDropper::Response &res)
+bool Dropper::tilt(ugv::activateDropper::Request &req, ugv::activateDropper::Response &res)
 {
-    if (req.status == 0) {
-        blanketAngle.data = CLOSED;
-    }   else if (req.status == 1)    {
-        blanketAngle.data = OPEN;
-    }   else if (req.status == 2 && blanketAngle.data == OPEN) {
-        blanketAngle.data = CLOSED;
-    }   else    {
-        blanketAngle.data = OPEN;
-    }
-        
+    tiltAngle.data = req.status;
     res.worked = true;
     return true;
 }
@@ -57,17 +49,31 @@ int main(int argc, char **argv)
 
     ros::NodeHandle nh;
     ros::Publisher datePublisher = nh.advertise<std_msgs::UInt16>("DateServo",1);
-    ros::Publisher blanketPublisher = nh.advertise<std_msgs::UInt16>("BlanketServo",1);
+    ros::Publisher tiltPublisher = nh.advertise<std_msgs::UInt16>("TiltServo",1);
     Dropper dropper;
     // start the dropper in the open position
-    ros::Rate loop_rate(10);
+    ros::Rate loop_rate(100);
     int count = 0;
     ros::ServiceServer dateService = nh.advertiseService("dropDates", &Dropper::dropDates, &dropper);
-    ros::ServiceServer blanketService = nh.advertiseService("dropBlanket", &Dropper::dropBlanket, &dropper);
+    ros::ServiceServer tilt = nh.advertiseService("tilt", &Dropper::tilt, &dropper);
+
+    std_msgs::UInt16 oldTilt = 0;
+    std_msgs::UInt16 oldDate = 0;
 
     while (ros::ok())   {
-        datePublisher.publish(dropper.dateAngle);
-        blanketPublisher.publish(dropper.blanketAngle);
+
+        if (dropper.dateAngle != oldDate)    {
+            datePublisher.publish(dropper.dateAngle);
+            oldDate = dropper.dateAngle;
+            
+        }
+        if (dropper.tiltAngle != oldTilt)   {
+            tiltPublisher.publish(dropper.tiltAngle);
+            oldTilt = dropper.tiltAngle;
+        }
+        
+        
+        
         ros::spinOnce();
         loop_rate.sleep();
         ++count;

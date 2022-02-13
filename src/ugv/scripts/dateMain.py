@@ -4,14 +4,23 @@ import rospy
 import time
 
 from ugv.srv import get2DObjective, activateDropper
-
+LEVEL = 130
+DOWN = 165
+DROP_BOX = 2
+OPEN = 1
+CLOSE = 0
 
 class UGV:
     def __init__(self) -> None:
         rospy.init_node('main controller')
         rospy.wait_for_service('get2DObjective')
+        rospy.wait_for_service('tilt')
+        rospy.wait_for_service('dropDates')
         self.get2DObjective = rospy.ServiceProxy('get2DObjective', get2DObjective)
         self.dateService = rospy.ServiceProxy('dropDates', activateDropper)
+        self.tilt = rospy.ServiceProxy('tilt', activateDropper)
+        self.tilt(LEVEL)
+        self.dateService(0)
 
     def scanForObjective(self, objective):
         resp = self.get2DObjective(objective)
@@ -25,6 +34,7 @@ class UGV:
             respRotate = resp.rotate
         
         if distance == 0:
+            print("did not detect")
             self.rotate(-40)
             resp = self.get2DObjective(objective)
             distance = resp.distance
@@ -45,29 +55,30 @@ class UGV:
             input()
         
 
-    def getDegrees(self, point):
-        return 0
 
-    def adjustPosition(self, point, distance):
-        self.rotate(self.getDegrees(point))
+    def adjustPosition(self, degrees, distance):
+        self.rotate(degrees)
         self.travel(distance)
 
     def catchDate(self):
+        print("catching date")
         DATE = 1
-        point, distance = self.scanForObjective(DATE)
-        self.adjustPosition(point, distance)
+        degrees, distance = self.scanForObjective(DATE)
+        self.adjustPosition(degrees, distance)
         
         return distance != 0
 
     def dropDate(self):
-        DROP_BOX = 2
-        OPEN = 1
-        CLOSE = 0
-        point, distance = self.scanForObjective(DROP_BOX)
+        print("dropping date")
+        self.tilt(DOWN)
+        time.sleep(2)
+        rotation, distance = self.scanForObjective(DROP_BOX)
         if distance == 0:
             print("ERROR CANNOT FIND DROP BOX!")
-            input()
-        self.adjustPosition(point, distance)
+            self.adjustPosition(20, 2000)
+            
+        self.tilt(LEVEL)
+        self.adjustPosition(rotation, distance)
         self.dateService(OPEN)
         time.sleep(2)
         self.dateService(CLOSE)

@@ -21,8 +21,9 @@ class Aligner:
 
     def cameraCallback(self, image_message):
         bridge = CvBridge()
-        cv_image = bridge.imgmsg_to_cv2(image_message, desired_encoding='rgb8')
+        cv_image = bridge.imgmsg_to_cv2(image_message, desired_encoding='bgr8')
         self.camera_image = np.asarray_chkfinite(cv_image)
+        cv2.imwrite('/home/alec/Pictures/cv_images/' + str(time.time_ns()) + '_aligned.jpg', self.camera_image)
     
     def alignerCallback(self, temp):
         r_height = self.realsense_image.shape[0]
@@ -49,12 +50,12 @@ def main():
         rospy.init_node('imageAlignerServer')
 
         aligner = Aligner()
-        rospy.Subscriber('camera/image', Image, aligner.cameraCallback)
-        rospy.Subscriber('camera/infra2/image_rect_raw', Image, aligner.realsenseCallback)
-        rospy.Service('align', align, aligner.alignerCallback)
-        
-        print("ready")
+        rospy.Subscriber('/camera/color/image_raw', Image, aligner.cameraCallback)
+        #rospy.Subscriber('camera/infra2/image_rect_raw', Image, aligner.realsenseCallback)
+        #rospy.Service('align', align, aligner.alignerCallback)
         rospy.spin()
+        print("ready")
+        
 
 if __name__ == '__main__':
     main()
